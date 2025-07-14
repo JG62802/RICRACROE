@@ -1,20 +1,62 @@
 body {
     font-family: Arial, sans-serif;
     text-align: center;
+    margin: 0;
+    padding: 0;
 }
 
 h1 {
     color: #333;
+    margin-bottom: 20px;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Use flexible sizing */
+    grid-template-rows: repeat(3, 1fr); /* Use flexible sizing */
+    width: 300px; /* Set a fixed width for the grid */
+    height: 300px; /* Set a fixed height for the grid */
+    margin: 0 auto; /* Centers the grid */
+    border: 2px solid #333; /* Adds a border around the entire grid */
 }
 
 .cell {
-    width: 100px;
-    height: 100px;
+    display: flex; /* Use flexbox for centering content */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
     border: 1px solid #999;
-    display: inline-block;
     font-size: 48px;
-    text-align: center;
-    line-height: 100px;
-    vertical-align: middle;
     cursor: pointer;
+    background-color: white; /* Default background color */
+    background-repeat: no-repeat; /* Prevent image repetition */
+    background-position: center; /* Center the image */
+    color: transparent; /* Hide text content */
+}
+
+.cell.marked {
+    cursor: not-allowed; /* Prevent further clicks */
+}
+
+.cell:nth-child(1),
+.cell:nth-child(2),
+.cell:nth-child(3) {
+    border-top: none; /* Remove top border for the first row */
+}
+
+.cell:nth-child(1),
+.cell:nth-child(4),
+.cell:nth-child(7) {
+    border-left: none; /* Remove left border for the first column */
+}
+
+.cell:nth-child(3),
+.cell:nth-child(6),
+.cell:nth-child(9) {
+    border-right: none; /* Remove right border for the last column */
+}
+
+.cell:nth-child(7),
+.cell:nth-child(8),
+.cell:nth-child(9) {
+    border-bottom: none; /* Remove bottom border for the last row */
 }
