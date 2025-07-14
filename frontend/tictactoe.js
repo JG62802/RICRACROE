@@ -14,7 +14,7 @@ socket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
     if (data.type === 'assignPlayer') {
-        playerId = data.player;
+        playerId = data.player; // Assign the player ID (X or O)
         status.textContent = `You are Player ${playerId}`;
     } else if (data.type === 'updateGame') {
         data.gameState.forEach((mark, index) => {
