@@ -4,8 +4,42 @@ let timerDisplay = document.getElementById("timer"); // Timer display element
 let currentPlayer = "X";
 let timer; // Timer for the turn system
 let countdown; // Countdown interval
+let gameOver = false; // Track if the game is over
+
+const socket = new WebSocket('ws://localhost:8080');
+let playerId;
+
+// Handle messages from the server
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'assignPlayer') {
+        playerId = data.player;
+        status.textContent = `You are Player ${playerId}`;
+    } else if (data.type === 'updateGame') {
+        data.gameState.forEach((mark, index) => {
+            const cell = cells[index];
+            if (mark && !cell.classList.contains('marked')) {
+                cell.classList.add('marked');
+                cell.style.backgroundImage = mark === 'X' ? "url('x.png')" : "url('o.png')";
+                cell.style.backgroundSize = "cover";
+            }
+        });
+
+        currentPlayer = data.currentPlayer; // Update the current player
+        status.textContent = `Player ${currentPlayer}'s Turn`;
+
+        if (data.winner) {
+            endGame(data.winner); // End the game if a winner is detected
+        } else if (data.draw) {
+            endGame("Draw"); // End the game if it's a draw
+        }
+    }
+};
 
 function startTurnTimer() {
+    if (gameOver) return; // Stop the timer if the game is over
+
     clearTimeout(timer); // Clear any existing timer
     clearInterval(countdown); // Clear any existing countdown interval
 
@@ -33,7 +67,12 @@ function startTurnTimer() {
 }
 
 function endGame(winner) {
-    status.textContent = `Player ${winner} Wins!`;
+    gameOver = true; // Mark the game as over
+    if (winner === "Draw") {
+        status.textContent = "It's a Draw!";
+    } else {
+        status.textContent = `Player ${winner} Wins!`;
+    }
     timerDisplay.textContent = ""; // Clear the timer display
     cells.forEach(cell => cell.removeEventListener("click", handleCellClick)); // Disable further clicks
     clearTimeout(timer); // Stop the timer
@@ -41,18 +80,14 @@ function endGame(winner) {
 }
 
 function handleCellClick(event) {
+    if (gameOver) return; // Prevent clicks if the game is over
+
     const cell = event.target;
-    if (!cell.classList.contains("marked")) { // Ensure the cell is not already marked
-        cell.classList.add("marked"); // Mark the cell to prevent further changes
-        cell.style.backgroundImage = currentPlayer === "X" ? "url('x.png')" : "url('o.png')"; // Set background image
-        cell.style.backgroundSize = "cover"; // Ensure the image covers the cell
-        if (checkWinner()) {
-            endGame(currentPlayer); // End the game if there's a winner
-        } else {
-            currentPlayer = currentPlayer === "X" ? "O" : "X"; // Switch player
-            status.textContent = `Player ${currentPlayer}'s Turn`;
-            startTurnTimer(); // Restart the timer for the next turn
-        }
+    const cellIndex = Array.from(cells).indexOf(cell);
+
+    // Ensure the cell is not already marked and it's the player's turn
+    if (!cell.classList.contains("marked") && currentPlayer === playerId) {
+        socket.send(JSON.stringify({ type: 'updateGame', cellIndex, player: playerId }));
     }
 }
 
