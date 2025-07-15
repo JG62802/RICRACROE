@@ -5,37 +5,89 @@ let currentPlayer = "X";
 let timer; // Timer for the turn system
 let countdown; // Countdown interval
 let gameOver = false; // Track if the game is over
+let playerId = null; // Initialize playerId as null
+let socket = null; // Declare socket globally
 
-const socket = new WebSocket('ws://localhost:8080');
-let playerId;
+const mainMenu = document.getElementById("main-menu");
+const gameScreen = document.getElementById("game-screen");
+const findMatchBtn = document.getElementById("find-match-btn");
 
-// Handle messages from the server
-socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+// Event listener for "Find a Match" button
+findMatchBtn.addEventListener("click", () => {
+    mainMenu.style.display = "none"; // Hide the main menu
+    gameScreen.style.display = "block"; // Show the game screen
 
-    if (data.type === 'assignPlayer') {
-        playerId = data.player; // Assign the player ID (X or O)
-        status.textContent = `You are Player ${playerId}`;
-    } else if (data.type === 'updateGame') {
-        data.gameState.forEach((mark, index) => {
-            const cell = cells[index];
-            if (mark && !cell.classList.contains('marked')) {
-                cell.classList.add('marked');
-                cell.style.backgroundImage = mark === 'X' ? "url('x.png')" : "url('o.png')";
-                cell.style.backgroundSize = "cover";
+    // Connect to the WebSocket server and start the game logic
+    connectToServer();
+});
+
+function connectToServer() {
+    socket = new WebSocket('ws://localhost:8080'); // Assign socket globally
+
+    socket.onopen = () => {
+        console.log('Connected to WebSocket server');
+    };
+
+    socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log(`Received message:`, data);
+
+        if (data.type === 'assignPlayer') {
+            playerId = data.player; // Assign the player ID (X or O)
+            status.textContent = `You are Player ${playerId}`;
+            console.log(`Assigned as Player ${playerId}`);
+        } else if (data.type === 'updateGame') {
+            // Update the game state on the client
+            data.gameState.forEach((mark, index) => {
+                const cell = cells[index];
+                if (mark && !cell.classList.contains('marked')) {
+                    cell.classList.add('marked');
+                    cell.style.backgroundImage = mark === 'X' ? "url('x.png')" : "url('o.png')";
+                    cell.style.backgroundSize = "cover";
+                }
+            });
+
+            // Update the current player and game status
+            currentPlayer = data.currentPlayer;
+            status.textContent = `Player ${currentPlayer}'s Turn`;
+
+            if (data.winner) {
+                endGame(data.winner);
+            } else if (data.draw) {
+                endGame("Draw");
             }
-        });
-
-        currentPlayer = data.currentPlayer; // Update the current player
-        status.textContent = `Player ${currentPlayer}'s Turn`;
-
-        if (data.winner) {
-            endGame(data.winner); // End the game if a winner is detected
-        } else if (data.draw) {
-            endGame("Draw"); // End the game if it's a draw
+        } else if (data.type === 'chatMessage') {
+            // Display chat messages
+            const chatBox = document.getElementById("chat-box");
+            const messageElement = document.createElement("div");
+            messageElement.textContent = `${data.player}: ${data.message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
         }
-    }
-};
+    };
+
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    socket.onclose = () => {
+        console.log('Disconnected from WebSocket server');
+    };
+
+    cells.forEach(cell => cell.addEventListener("click", handleCellClick));
+
+    // Add event listener for chat
+    const chatInput = document.getElementById("chat-input");
+    const sendChatBtn = document.getElementById("send-chat-btn");
+
+    sendChatBtn.addEventListener("click", () => {
+        const message = chatInput.value.trim();
+        if (message) {
+            socket.send(JSON.stringify({ type: 'chatMessage', player: playerId, message }));
+            chatInput.value = ""; // Clear the input field
+        }
+    });
+}
 
 function startTurnTimer() {
     if (gameOver) return; // Stop the timer if the game is over
@@ -73,20 +125,34 @@ function endGame(winner) {
     } else {
         status.textContent = `Player ${winner} Wins!`;
     }
-    timerDisplay.textContent = ""; // Clear the timer display
-    cells.forEach(cell => cell.removeEventListener("click", handleCellClick)); // Disable further clicks
-    clearTimeout(timer); // Stop the timer
-    clearInterval(countdown); // Stop the countdown
+
+    // Show game options
+    const gameOptions = document.getElementById("game-options");
+    gameOptions.style.display = "block";
+
+    // Disable further clicks on cells
+    cells.forEach(cell => cell.removeEventListener("click", handleCellClick));
 }
 
 function handleCellClick(event) {
     if (gameOver) return; // Prevent clicks if the game is over
+
+    if (!playerId) {
+        console.error("Player ID is not assigned yet.");
+        return; // Exit the function if playerId is not assigned
+    }
 
     const cell = event.target;
     const cellIndex = Array.from(cells).indexOf(cell);
 
     // Ensure the cell is not already marked and it's the player's turn
     if (!cell.classList.contains("marked") && currentPlayer === playerId) {
+        // Mark the cell locally
+        cell.classList.add("marked");
+        cell.style.backgroundImage = currentPlayer === "X" ? "url('x.png')" : "url('o.png')";
+        cell.style.backgroundSize = "cover";
+
+        // Send the move to the server
         socket.send(JSON.stringify({ type: 'updateGame', cellIndex, player: playerId }));
     }
 }
@@ -113,8 +179,40 @@ function checkWinner() {
     });
 }
 
-// Attach event listeners to all cells
-cells.forEach(cell => cell.addEventListener("click", handleCellClick));
+const newGameBtn = document.getElementById("new-game-btn");
+const rematchBtn = document.getElementById("rematch-btn");
 
-// Start the timer for the first turn
-startTurnTimer();
+newGameBtn.addEventListener("click", () => {
+    // Reset the game state and start a new game with a new player
+    socket.close(); // Disconnect from the current WebSocket
+    location.reload(); // Reload the page to start a new game
+});
+
+rematchBtn.addEventListener("click", () => {
+    // Reset the game state and start a rematch with the current player
+    resetGameState();
+    socket.send(JSON.stringify({ type: 'rematch' })); // Notify the server about the rematch
+});
+
+function resetGameState() {
+    gameOver = false;
+    gameState = Array(9).fill(null); // Reset the game state
+    currentPlayer = "X"; // Reset the current player
+    status.textContent = `Player ${currentPlayer}'s Turn`;
+    const gameOptions = document.getElementById("game-options");
+    gameOptions.style.display = "none"; // Hide game options
+
+    // Clear the grid
+    cells.forEach(cell => {
+        cell.classList.remove("marked");
+        cell.style.backgroundImage = "";
+        cell.addEventListener("click", handleCellClick); // Re-enable cell clicks
+    });
+
+    console.log(`Broadcasting update:`, {
+        gameState,
+        currentPlayer,
+        winner: null,
+        draw: false
+    });
+}

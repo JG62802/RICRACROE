@@ -8,32 +8,43 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Heading for the game -->
-    <h1>Tic-Tac-Toe Battle Arena</h1>
-    
-    <!-- Status message area -->
-    <div id="status">Player X's Turn</div>
-    
-    <!-- Timer area -->
-    <div id="timer">Time Remaining: 20 seconds</div>
-    
-    <!-- Container for the 3x3 grid -->
-    <div id="grid">
-        <!-- Row 1 -->
-        <div id="cell-0" class="cell"></div>
-        <div id="cell-1" class="cell"></div>
-        <div id="cell-2" class="cell"></div>
-        <!-- Row 2 -->
-        <div id="cell-3" class="cell"></div>
-        <div id="cell-4" class="cell"></div>
-        <div id="cell-5" class="cell"></div>
-        <!-- Row 3 -->
-        <div id="cell-6" class="cell"></div>
-        <div id="cell-7" class="cell"></div>
-        <div id="cell-8" class="cell"></div>
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <h1>Tic-Tac-Toe Battle Arena</h1>
+        <button id="find-match-btn">Find a Match</button>
     </div>
-    
+
+    <!-- Game Screen -->
+    <div id="game-screen" style="display: none;">
+        <h1>Tic-Tac-Toe Battle Arena</h1>
+        <div id="status">Player X's Turn</div>
+        <div id="timer">Time Remaining: 20 seconds</div>
+        <div id="grid">
+            <div id="cell-0" class="cell"></div>
+            <div id="cell-1" class="cell"></div>
+            <div id="cell-2" class="cell"></div>
+            <div id="cell-3" class="cell"></div>
+            <div id="cell-4" class="cell"></div>
+            <div id="cell-5" class="cell"></div>
+            <div id="cell-6" class="cell"></div>
+            <div id="cell-7" class="cell"></div>
+            <div id="cell-8" class="cell"></div>
+        </div>
+        <div id="chat-container">
+            <div id="chat-box"></div>
+            <input id="chat-input" type="text" placeholder="Type your message..." />
+            <button id="send-chat-btn">Send</button>
+        </div>
+        <div id="game-options" style="display: none;">
+            <button id="new-game-btn">Start New Game</button>
+            <button id="rematch-btn">Rematch</button>
+        </div>
+    </div>
+
     <!-- Link to JS file -->
+    <script>
+        console.log(`Received update:`, data);
+    </script>
     <script src="tictactoe.js"></script>
 </body>
 </html>
